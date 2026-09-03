@@ -1,0 +1,57 @@
+# Project
+requirements.md
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Binaries
+/nethttp/nethttp
+/gin/gin
+/fiber/fiber
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go tooling
+*.test
+*.out
+coverage.*
+*.prof
+*.pprof
+vendor/
+go.work
+go.work.sum
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/settings.local.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Misc
+tmp/
+*.log
