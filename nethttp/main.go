@@ -24,9 +24,12 @@ func main() {
 
 	noteHandler := handlers.NewNoteHandler(repository.NewNoteRepository(db))
 
-	serverMux.HandleFunc("/", noteHandler.RootHandler)
-	serverMux.HandleFunc("/notes", noteHandler.NotesRootHandler)
-	serverMux.HandleFunc("/notes/{id}", noteHandler.NotesSingleHandler)
+	serverMux.HandleFunc("GET /{$}", noteHandler.RootHandler)
+	serverMux.HandleFunc("POST /notes", noteHandler.CreateNoteHandler)
+	serverMux.HandleFunc("GET /notes", noteHandler.ListNotesHandler)
+	serverMux.HandleFunc("GET /notes/{id}", noteHandler.GetSingleNoteHandler)
+	serverMux.HandleFunc("PUT /notes/{id}", noteHandler.UpdateSingleNoteHandler)
+	serverMux.HandleFunc("DELETE /notes/{id}", noteHandler.DeleteSingleNoteHandler)
 
 	addr := ":8080"
 	fmt.Println("Server listening on", addr)
