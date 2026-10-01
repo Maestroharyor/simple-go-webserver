@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/maestroharyor/go-webserver/nethttp/internal/database"
+	"github.com/maestroharyor/go-webserver/nethttp/internal/env"
 	"github.com/maestroharyor/go-webserver/nethttp/internal/handlers"
 	"github.com/maestroharyor/go-webserver/nethttp/internal/middleware"
 	"github.com/maestroharyor/go-webserver/nethttp/internal/repository"
@@ -13,7 +14,9 @@ import (
 
 func main() {
 
-	db, err := database.Connect("notes")
+	port := fmt.Sprintf(":%s", env.GetEnv("PORT", "8080"))
+	databasePath := env.GetEnv("DATABASE_PATH", "notes.db")
+	db, err := database.Connect(databasePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,15 +28,16 @@ func main() {
 	noteHandler := handlers.NewNoteHandler(repository.NewNoteRepository(db))
 
 	serverMux.HandleFunc("GET /{$}", noteHandler.RootHandler)
+	serverMux.HandleFunc("GET /health", noteHandler.HealthCheckHandler)
 	serverMux.HandleFunc("POST /notes", noteHandler.CreateNoteHandler)
 	serverMux.HandleFunc("GET /notes", noteHandler.ListNotesHandler)
 	serverMux.HandleFunc("GET /notes/{id}", noteHandler.GetSingleNoteHandler)
 	serverMux.HandleFunc("PUT /notes/{id}", noteHandler.UpdateSingleNoteHandler)
 	serverMux.HandleFunc("DELETE /notes/{id}", noteHandler.DeleteSingleNoteHandler)
 
-	addr := ":8080"
-	fmt.Println("Server listening on", addr)
-	if err := http.ListenAndServe(addr, middleware.Logging(serverMux)); err != nil {
+	fmt.Println("Server listening on", port)
+
+	if err := http.ListenAndServe(port, middleware.Logging(serverMux)); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -2,14 +2,12 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 
 	_ "modernc.org/sqlite"
 )
 
-func Connect(databaseName string) (*sql.DB, error) {
-	databaseFileName := fmt.Sprintf("%s.db", databaseName)
-	db, err := sql.Open("sqlite", databaseFileName)
+func Connect(databasePath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", databasePath)
 	if err != nil {
 		return nil, err
 	}

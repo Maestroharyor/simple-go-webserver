@@ -3,10 +3,16 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/maestroharyor/go-webserver/nethttp/internal/models"
 )
+
+var ErrNotFound = errors.New("note not found")
+
+const noteColumns = `id, title, content, created_at, updated_at`
 
 type NoteRepository struct {
 	db *sql.DB
@@ -17,7 +23,8 @@ func NewNoteRepository(db *sql.DB) *NoteRepository {
 }
 
 func (r *NoteRepository) CreateNote(ctx context.Context, note *models.Note) error {
-	result, err := r.db.ExecContext(ctx, `INSERT INTO notes (title, content, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, note.Title, note.Content)
+	now := time.Now().UTC()
+	result, err := r.db.ExecContext(ctx, `INSERT INTO notes (title, content, created_at, updated_at) VALUES (?, ?, ?, ?)`, note.Title, note.Content, now, now)
 
 	if err != nil {
 		return fmt.Errorf("create note error: %w", err)
@@ -29,12 +36,14 @@ func (r *NoteRepository) CreateNote(ctx context.Context, note *models.Note) erro
 	}
 
 	note.ID = int(id)
+	note.CreatedAt = now
+	note.UpdatedAt = now
 
 	return nil
 }
 
 func (r *NoteRepository) GetNotes(ctx context.Context) ([]*models.Note, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT * FROM notes`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+noteColumns+` FROM notes`)
 	if err != nil {
 		return nil, fmt.Errorf("get notes error: %w", err)
 	}
@@ -43,34 +52,44 @@ func (r *NoteRepository) GetNotes(ctx context.Context) ([]*models.Note, error) {
 	notes := make([]*models.Note, 0)
 
 	for rows.Next() {
-		var note models.Note
-		if err := rows.Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt, &note.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scan notes error: %w", err)
+		note, err := scanNote(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan note error: %w", err)
 		}
-		notes = append(notes, &note)
+		notes = append(notes, note)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows error: %w", err)
 	}
 
 	return notes, nil
 }
 
 func (r *NoteRepository) GetNoteById(ctx context.Context, id int) (*models.Note, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT * from notes where id = ?`, id)
-	var note models.Note
-
-	if err := row.Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt, &note.UpdatedAt); err != nil {
-		return nil, fmt.Errorf("get notes by if error: %w", err)
+	row := r.db.QueryRowContext(ctx, `SELECT `+noteColumns+` from notes where id = ?`, id)
+	note, err := scanNote(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
 	}
 
-	return &note, nil
+	if err != nil {
+		return nil, fmt.Errorf("get note by id error: %w", err)
+	}
+
+	return note, nil
 }
 
-func (r *NoteRepository) UpdateNoteById(ctx context.Context, id int, note *models.Note) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE notes SET title = ?, content = ? where id = ?`, note.Title, note.Content, id)
+func (r *NoteRepository) UpdateNoteById(ctx context.Context, id int, note *models.Note) (*models.Note, error) {
+	result, err := r.db.ExecContext(ctx, `UPDATE notes SET title = ?, content = ?, updated_at = ? where id = ?`, note.Title, note.Content, time.Now().UTC(), id)
 	if err != nil {
-		return fmt.Errorf("update note by id error: %w", err)
+		return nil, fmt.Errorf("update note by id error: %w", err)
+	}
+	if err := checkRowsAffected(result); err != nil {
+		return nil, err
 	}
 
-	return checkRowsAffected(result)
+	return r.GetNoteById(ctx, id)
 }
 
 func (r *NoteRepository) DeleteNoteById(ctx context.Context, id int) error {

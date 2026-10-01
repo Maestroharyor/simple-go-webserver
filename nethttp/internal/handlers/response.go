@@ -8,7 +8,7 @@ import (
 type response[T any] struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
-	Data    T      `json:"data,omitempty"`
+	Data    T      `json:"data,omitzero"`
 }
 
 func WriteSuccess[T any](w http.ResponseWriter, status int, message string, data T) {
