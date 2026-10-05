@@ -1,4 +1,4 @@
-module github.com/maestroharyor/go-webserver
+module github.com/maestroharyor/go-webserver/nethttp
 
 go 1.25.0
 
